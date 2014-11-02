@@ -67,6 +67,31 @@ ${builder.toString()}
     }
 }
 
+def unshorten = { String url ->
+    try {
+        def connection = new URL(url).openConnection() as HttpURLConnection
+        connection.setRequestMethod('HEAD')
+        connection.setInstanceFollowRedirects(false)
+        connection.setConnectTimeout(2500)
+        connection.setReadTimeout(2500)
+        connection.connect()
+
+        def responseCode = connection.getResponseCode()
+        switch(responseCode) {
+            case 301..303:
+                return connection.getHeaderField('Location')
+
+            case 404:
+                return null
+
+            default:
+                return url
+        }
+    } catch (Exception e) {
+        return url
+    }
+}
+
 fetchData.call('/api/lists', { HttpResponseDecorator listResponse, Reader listReader ->
     def lists = objectMapper.readValue(listReader, Map).objects as List<Map>
     def listsLatch = new CountDownLatch(lists.size())
@@ -79,8 +104,8 @@ fetchData.call('/api/lists', { HttpResponseDecorator listResponse, Reader listRe
 
         fetchData.call('/api/lists/' + listObject.id + '/clips', { HttpResponseDecorator resp, Reader clipReader ->
             objectMapper.readValue(clipReader, Map).objects.sort { -it.created }.each { Map clipObject ->
-                def url = clipObject.url.toString()
-                if (!importedLinks.contains(url.toUpperCase())) {
+                def url = unshorten.call(clipObject.url.toString())
+                if (url && !importedLinks.contains(url.toUpperCase())) {
                     clipsByList[listObject.title] << [
                             title: clipObject.title,
                             url  : url

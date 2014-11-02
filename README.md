@@ -24,8 +24,7 @@ Importing the resulting 'kippt-export-TIMESTAMP.html' into the Google Bookmarks 
 To Do
 ===
 
-- De-duplicate URLs on export (ie. multiple Kippt entries for same link)
-- Convert t.co links to their fully qualified equivalents.
+- Convert t.co links to their fully qualified equivalents (partially implemented).
 - Support exporting nested groups of bookmarks from Kippt based on naming conventions.
 - Pagination support (currently only import the first 200 links from each Kippt list).
 - Avoid exporting links that have been previously imported in to the Google Bookmarks Manager.
