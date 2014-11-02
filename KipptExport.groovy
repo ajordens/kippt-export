@@ -1,8 +1,9 @@
-import com.fasterxml.jackson.databind.ObjectMapper
 @Grapes([
         @Grab(group = 'org.codehaus.groovy.modules.http-builder', module = 'http-builder', version = '0.7'),
         @Grab(group = 'com.fasterxml.jackson.core', module = 'jackson-databind', version = '2.4.3')
 ])
+
+import com.fasterxml.jackson.databind.ObjectMapper
 
 import groovyx.net.http.HTTPBuilder
 import groovyx.net.http.HttpResponseDecorator
@@ -33,7 +34,7 @@ def clipsByList = ['Inbox': []]
 def fetchData = { String path, Closure successClosure, Closure failureClosure = {} ->
     http.request(GET, TEXT) { req ->
         uri.path = path
-        uri.query = [limit: 500]
+        uri.query = [limit: 200]
         headers.'X-Kippt-Username' = user
         headers.'X-Kippt-API-Token' = apiKey
 
@@ -67,17 +68,17 @@ ${builder.toString()}
     }
 }
 
-def unshorten = { String url ->
+def expandUrl = { String url, int timeout = 2500 ->
     try {
         def connection = new URL(url).openConnection() as HttpURLConnection
         connection.setRequestMethod('HEAD')
         connection.setInstanceFollowRedirects(false)
-        connection.setConnectTimeout(2500)
-        connection.setReadTimeout(2500)
+        connection.setConnectTimeout(timeout)
+        connection.setReadTimeout(timeout)
         connection.connect()
 
         def responseCode = connection.getResponseCode()
-        switch(responseCode) {
+        switch (responseCode) {
             case 301..303:
                 return connection.getHeaderField('Location')
 
@@ -104,7 +105,7 @@ fetchData.call('/api/lists', { HttpResponseDecorator listResponse, Reader listRe
 
         fetchData.call('/api/lists/' + listObject.id + '/clips', { HttpResponseDecorator resp, Reader clipReader ->
             objectMapper.readValue(clipReader, Map).objects.sort { -it.created }.each { Map clipObject ->
-                def url = unshorten.call(clipObject.url.toString())
+                def url = expandUrl.call(clipObject.url.toString())
                 if (url && !importedLinks.contains(url.toUpperCase())) {
                     clipsByList[listObject.title] << [
                             title: clipObject.title,
