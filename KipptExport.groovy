@@ -70,6 +70,7 @@ ${builder.toString()}
 fetchData.call('/api/lists', { HttpResponseDecorator listResponse, Reader listReader ->
     def lists = objectMapper.readValue(listReader, Map).objects as List<Map>
     def listsLatch = new CountDownLatch(lists.size())
+    def importedLinks = new HashSet<String>()
 
     lists.sort { it.title }.each { Map listObject ->
         if (!clipsByList.containsKey(listObject.title)) {
@@ -78,10 +79,14 @@ fetchData.call('/api/lists', { HttpResponseDecorator listResponse, Reader listRe
 
         fetchData.call('/api/lists/' + listObject.id + '/clips', { HttpResponseDecorator resp, Reader clipReader ->
             objectMapper.readValue(clipReader, Map).objects.sort { -it.created }.each { Map clipObject ->
-                clipsByList[listObject.title] << [
-                        title: clipObject.title,
-                        url  : clipObject.url
-                ]
+                def url = clipObject.url.toString()
+                if (!importedLinks.contains(url.toUpperCase())) {
+                    clipsByList[listObject.title] << [
+                            title: clipObject.title,
+                            url  : url
+                    ]
+                    importedLinks << url.toUpperCase()
+                }
             }
 
             listsLatch.countDown()
