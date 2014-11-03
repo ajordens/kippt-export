@@ -102,6 +102,8 @@ ${builder.toString()}
             }
         } catch (UnknownHostException e) {
             return null
+        } catch (MalformedURLException e) {
+            return null
         } catch (SSLHandshakeException e) {
             log.warn("Unable to expand url (${url}), SSL handshake failure.")
             return url
@@ -133,14 +135,25 @@ ${builder.toString()}
                                 -it.created
                             }.collectParallel { Map clipObject ->
                                 def url = expandUrl(clipObject.url.toString())
-                                if (url && !importedLinks.contains(url.toUpperCase())) {
+                                if (!url) {
+                                    return null
+                                }
+
+                                def originalUrl = url
+                                url = expandUrl(url) ?: originalUrl
+
+                                while (url != originalUrl) {
+                                    originalUrl = url
+                                    url = expandUrl(url) ?: originalUrl
+                                }
+
+                                if (!importedLinks.contains(url.toUpperCase())) {
                                     importedLinks << url.toUpperCase()
                                     return [
                                             title: clipObject.title,
                                             url  : url
                                     ]
                                 }
-                                return null
                             }.findAll { it != null }
                             listsLatch.countDown()
                         })
